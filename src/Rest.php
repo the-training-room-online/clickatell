@@ -57,22 +57,17 @@ class Rest
      */
     protected function handle($result, $httpCode)
     {
-        // Check for non-OK statuses
+        $decoded = json_decode($result, true);
+        // Check for OK statuses
         $codes = explode(",", static::ACCEPTED_CODES);
-
-        if (!in_array($httpCode, $codes)) {
-            // Decode JSON if possible, if this can't be decoded...something fatal went wrong
-            // and we will just return the entire body as an exception.
-            if ($error = json_decode($result, true)) {
-                $error = $error['error'];
-            } else {
-                $error = $result;
-            }
-
-            throw new \Clickatell\ClickatellException($error);
-        } else {
-            return json_decode($result, true);
+        $ok_status = in_array($httpCode, $codes);
+        $is_error = isset($decoded['error']) || !$ok_status;
+        if ($is_error) {
+            // If no error key is present in the decoded JSON, return the entire body as an exception.
+            $error = isset($decoded['error']) ? $decoded['error'] : $result;
+            throw new ClickatellException($error);
         }
+        return $decoded;
     }
 
     /**
